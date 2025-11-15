@@ -55,10 +55,24 @@ public class PlayerController : MonoBehaviour, IChange, IAttack {
 
     public ComboInput _comboInput;
     
+    [Header("Game Mode")]
+    protected IGameMode gameMode;
 
     private void Awake()
     {
         _defaultPlayerAction = new CInputSystemMultiplayer();
+        
+        // Obtener el modo de juego del GameModeManager
+        if (GameModeManager.Instance != null)
+        {
+            gameMode = GameModeManager.Instance.CurrentGameMode;
+        }
+        else
+        {
+            // Fallback: crear modo local si no hay GameModeManager
+            gameMode = new LocalGameMode();
+            gameMode.Initialize();
+        }
     }
     public virtual void Start ()
 	{
@@ -104,121 +118,70 @@ public class PlayerController : MonoBehaviour, IChange, IAttack {
 
 	public virtual void Move()
 	{
-        //float moveHorizontal;
-        //float moveVertical;
-        //bool Jump;
-        
+        // Verificar autoridad antes de procesar movimiento
+        if (!gameMode.HasAuthority(gameObject))
+            return;
+            
 		switch (_PlayerCount)
 		{
 			case 0:
-				// Debug.Log("Player 1");
                 moveVector = _MoveAction.ReadValue<Vector2>();
                 movement = new Vector3(moveVector.x, 0.0f, moveVector.y);
                 var movementDirection = new Vector3(moveVector.x, 0.0f, moveVector.y);
                 movementDirection.Normalize();
-                //Vector3 movementDirection = new Vector3(movement.x, 0, movement.y);
-                //transform.Translate(movement * speed * Time.deltaTime, Space.World);
-
-                //if (movementDirection != Vector3.zero)
-                //{
-
-              
-                // Quaternion toRotation = Quaternion.LookRotation(movementDirection, Vector3.up); ;
-                //  transform.rotation = Quaternion.RotateTowards(transform.rotation, toRotation, speed);
-                
-                //}
-                //Vector3 movementDirection = new Vector3(movement.x, 0, movement.y);
-                //movementDirection.Normalize();
-
-                //if (movementDirection != Vector3.zero)
-                //{
-                //    Quaternion toRotation = Quaternion.LookRotation(movementDirection, Vector3.up);
-                //    transform.rotation = Quaternion.RotateTowards(transform.rotation, toRotation, 20 * Time.deltaTime);
-                //}
                 break;
 
             case 1:
-              
                 P2Controller();
-                //_MoveAction = _defaultPlayerAction.Player.Move;
-                //_MoveAction.Enable();
-
-                //_JumpAction = _defaultPlayerAction.Player.Jump;
-                //_JumpAction.Enable();
-
-                //_ChangeForms_Action = _defaultPlayerAction.Player.ChangeForm;
-                //_ChangeForms_Action.Enable();
-
-                //_Attack_1Action = _defaultPlayerAction.Player.Attack1;
-                //_Attack_1Action.Enable();
-
-                //_Attack_2Action = _defaultPlayerAction.Player.Attack2;
-                //_Attack_2Action.Enable();
-
-
-                //_defaultPlayerAction.Player.Jump.performed += OnJump;
-                //_defaultPlayerAction.Player.Move.performed += OnMove;
-                //_defaultPlayerAction.Player.ChangeForm.performed += OnChangeForm;
                 break;
+                
             case 2:
-               // Debug.Log("Player 3");
                 P3Controller();
-                //moveHorizontal= Input.GetAxis("HorizontalPlayer2");
-                //moveVertical=Input.GetAxis("VerticalPlayer2");
-                //movement = new Vector3(moveHorizontal, 0.0f, moveVertical);
-                //rb.AddForce(movement * speed);
                 break;
 
             case 3:
                 P4Controller();
-               // Debug.Log("Player 4");
-
-
                 break;
+                
             default:
 				Debug.LogError("El control no se asigno");
 				break;
 		}
 
-
-
-        //      float moveHorizontal;
-        //      float moveVertical;
-
-
-        //      moveHorizontal = Input.GetAxis("Horizontal");
-        //moveVertical = Input.GetAxis("Vertical");
-        //movement = new Vector3(moveVector.x, 0.0f, moveVector.y);
-      
-
-		//Jump = Input.GetKeyDown('Jump');
-
 		if (Input.GetButtonDown("Jump"))
         {
-                  rb.AddForce(Vector3.up * _ForceJump,ForceMode.Impulse);
+            rb.AddForce(Vector3.up * _ForceJump, ForceMode.Impulse);
         }
-      //  rb.AddForce(movement * speed);
-
-
     }
 
     public virtual void EspecialHability()
 	{
+        // Solo procesar ataques si tenemos autoridad
+        if (!gameMode.HasAuthority(gameObject))
+            return;
+            
 		KeyCode Attack_1 = KeyCode.Mouse0;
 		KeyCode Attack_2 = KeyCode.Mouse1;
 
 		if (Input.GetKeyDown(Attack_1))
 		{
-		CBulletManager.Inst.SpawnAttack_1( Attack_Pos.position, Attack_1_GameObject);
+            // Usar gameMode para spawn (compatible con local y online)
+            GameObject projectile = gameMode.SpawnProjectile(Attack_Pos.position, Attack_1_GameObject);
+            if (projectile != null)
+            {
+                CBulletManager.Inst._ListPolimorfic.Add(projectile.GetComponent<CGenericBullet>());
+            }
         }
 
 		else if(Input.GetKeyDown(Attack_2))
 		{
-            CBulletManager.Inst.SpawnAttack_2(Attack_Pos.position, Attack_2_GameObject);
+            // Usar gameMode para spawn (compatible con local y online)
+            GameObject projectile = gameMode.SpawnProjectile(Attack_Pos.position, Attack_2_GameObject);
+            if (projectile != null)
+            {
+                CBulletManager.Inst._ListPolimorfic.Add(projectile.GetComponent<CGenericBullet>());
+            }
         }
-       
-
-
     }
 	// When this game object intersects a collider with 'is trigger' checked, 
 	// store a reference to that collider in a variable named 'other'..
@@ -249,7 +212,6 @@ public class PlayerController : MonoBehaviour, IChange, IAttack {
         switch (_PlayerCount)
         {
             case 0:
-                //Debug.Log("Player 1");
 
                 _MoveAction = _defaultPlayerAction.Player.Move;
                 _MoveAction.Enable();
@@ -273,51 +235,21 @@ public class PlayerController : MonoBehaviour, IChange, IAttack {
                 break;
 
             case 1:
-              //  Debug.Log("Player 2");
                 P2Controller();
-                //_MoveAction = _defaultPlayerAction.Player.Move;
-                //_MoveAction.Enable();
-
-                //_JumpAction = _defaultPlayerAction.Player.Jump;
-                //_JumpAction.Enable();
-
-                //_ChangeForms_Action = _defaultPlayerAction.Player.ChangeForm;
-                //_ChangeForms_Action.Enable();
-
-                //_Attack_1Action = _defaultPlayerAction.Player.Attack1;
-                //_Attack_1Action.Enable();
-
-                //_Attack_2Action = _defaultPlayerAction.Player.Attack2;
-                //_Attack_2Action.Enable();
-
-
-                //_defaultPlayerAction.Player.Jump.performed += OnJump;
-                //_defaultPlayerAction.Player.Move.performed += OnMove;
-                //_defaultPlayerAction.Player.ChangeForm.performed += OnChangeForm;
                 break;
+                
             case 2:
-              //  Debug.Log("Player 3");
                 P3Controller();
-                //moveHorizontal= Input.GetAxis("HorizontalPlayer2");
-                //moveVertical=Input.GetAxis("VerticalPlayer2");
-                //movement = new Vector3(moveHorizontal, 0.0f, moveVertical);
-                //rb.AddForce(movement * speed);
                 break;
 
             case 3:
                 P4Controller();
-              //  Debug.Log("Player 4");
-
-
                 break;
+                
             default:
-             //   Debug.LogError("El control no se asigno");
+                Debug.LogError("El control no se asigno");
                 break;
         }
-
-
-        //_defaultPlayerAction.Player.Attack1.performed += OnAttack1;
-        //_defaultPlayerAction.Player.Attack2.performed += OnAttack2;
 
     }
 
@@ -333,12 +265,6 @@ public class PlayerController : MonoBehaviour, IChange, IAttack {
             _Attack_1Action.Disable();
             _Attack_2Action.Disable();
         }
-        //_defaultPlayerAction.Player.Horizontal.Disable();
-        //_defaultPlayerAction.Player.Vertical.Disable();
-        //_defaultPlayerAction.Player.Jump.Disable();
-        //_defaultPlayerAction.Player.ChangeForm.Disable();
-        //_defaultPlayerAction.Player.Attack1.Disable();
-        //_defaultPlayerAction.Player.Attack2.Disable();
     }
     public virtual void P1Controller()
     {
@@ -350,12 +276,8 @@ public class PlayerController : MonoBehaviour, IChange, IAttack {
 
         float moveHorizontal;
         float moveVertical;
-
-       // Debug.Log("Player 2 Controller");
         moveHorizontal = Input.GetAxisRaw("HorizontalP2");
-      //  Debug.Log("Horizontal: "+ moveHorizontal);
         moveVertical = Input.GetAxis("VerticalP2");
-       // Debug.Log("Horizontal: " + moveHorizontal);
         movement = new Vector3(moveHorizontal, 0.0f, moveVertical);
         movement.Normalize();
         var movementDirection = new Vector3(movement.x, 0.0f, movement.z);
@@ -364,35 +286,8 @@ public class PlayerController : MonoBehaviour, IChange, IAttack {
         if(movementDirection != Vector3.zero)
         {
             Quaternion toRotation = Quaternion.LookRotation(movementDirection, Vector3.up);
-            transform.rotation = Quaternion.RotateTowards(transform.rotation, toRotation, _rotationspeed /** 2 *Time.deltaTime*/);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, toRotation, _rotationspeed);
         }
-
-        //if(Input.GetButtonDown("P2SoftPunch"))
-        //{
-        //    //Debug.Log("Entra en Soft Punch");
-        //     Attack_GameObject.SetActive(true);
-        //    //Debug.Log(Attack_GameObject.activeSelf);
-        //    Golpe();
-        //}
-       
-        //else if (Input.GetButtonDown("P2HardPunch"))
-        //{
-        //    // Debug.Log("Entra en Hard Punch");
-        //    Attack_GameObject.SetActive(true);
-        //    Golpe();
-        //}
-        
-        //else
-        //{
-        //    //Attack_GameObject.SetActive(false);
-        //    Invoke("DesactiveHit", 5f);
-        //}
-      
-        ////else if (Input.GetButtonUp("P2HardPunch"))
-        ////{
-        ////    // Debug.Log("Entra en Hard Punch");
-        ////    Attack_GameObject.SetActive(false);
-        ////}
 
     }
     public void DesactiveHit()
@@ -435,7 +330,6 @@ public class PlayerController : MonoBehaviour, IChange, IAttack {
 
     private void OnJump(InputAction.CallbackContext context)
 	{
-		Debug.Log("Jump");
 	}
 
 	private void OnMove(InputAction.CallbackContext context)
@@ -443,32 +337,23 @@ public class PlayerController : MonoBehaviour, IChange, IAttack {
 
 
        Vector2 MoveVector_P = _MoveAction.ReadValue<Vector2>();
-       // Debug.Log($"move: {MoveVector_P}");
     }
     private void OnChangeForm(InputAction.CallbackContext context)
     {
-		//Debug.Log("ChangeForm");
         bool changeForm;
 		changeForm = _ChangeForms_Action.ReadValue<bool>();
     }
   //  private void OnAttack1(InputAction.CallbackContext context)
   //  {
-		//Debug.Log("Attack1");
   //      bool Attack1;
   //      Attack1 = _Attack_1Action.ReadValue<bool>();
   //  }
   //  private void OnAttack2(InputAction.CallbackContext context)
   //  {
-		//Debug.Log("Attack2");
   //      bool Attack2;
   //      Attack2 = _Attack_2Action.ReadValue<bool>();
   //  }
 
-    public virtual void AndroidControllerTest()
-    {
-      
-       
-    }
 
     public virtual void OnChange()
     {
@@ -483,7 +368,8 @@ public class PlayerController : MonoBehaviour, IChange, IAttack {
         {
             if(collisionador.CompareTag("Player") && collisionador.gameObject != gameObject)
             {
-                collisionador.transform.GetComponent<CTestEnemy>().TakeDamage(DamagePunch);
+                // TODO: Implementar sistema de daño cuando esté disponible
+                // collisionador.transform.GetComponent<IDamageable>().TakeDamage(DamagePunch);
             }
         }
     }

@@ -508,6 +508,26 @@ public class NetworkGameMode : IGameMode
 
 ### 11.4 Plan de Implementación por Fases
 
+#### **Fase 0: Limpieza Pre-Refactorización (1-2 días, ANTES de Fase 1)**
+
+**Objetivo:** Limpiar código antes de comenzar integración con Photon.
+
+**Tareas:**
+1. ✅ Eliminar sistemas de test/debug (ver sección 11.11.1)
+2. ✅ Eliminar clases vacías (ver sección 11.11.2)
+3. ✅ Eliminar sistemas no usados (ver sección 11.11.3)
+4. ✅ Limpiar código comentado (ver sección 11.11.4)
+
+**Criterios de Éxito:**
+- ✅ Código más limpio y legible
+- ✅ Sin clases vacías o no usadas
+- ✅ Sin sistemas de test en código de producción
+- ✅ Juego funciona exactamente igual que antes
+
+**Referencia:** Ver sección 11.11 para detalles completos del plan de limpieza.
+
+---
+
 #### **Fase 1: Preparación (Semanas 1-2)**
 
 **Objetivo:** Crear la infraestructura base sin romper funcionalidad existente.
@@ -891,12 +911,1186 @@ Assets/PartyGame/OriginalVersion/Completed-Game/
 
 ---
 
+### 11.11 Sistemas a Simplificar o Eliminar para Reducir Riesgos
+
+Esta sección identifica sistemas que pueden ser eliminados o simplificados para reducir complejidad, facilitar la integración con Photon, y minimizar riesgos de bugs.
+
+---
+
+#### 11.11.1 Sistemas de Test/Debug (ELIMINAR)
+
+**Razón:** No son necesarios para producción y agregan complejidad innecesaria.
+
+| Sistema | Ubicación | Acción | Impacto |
+|---------|-----------|--------|---------|
+| `CTestEnemy.cs` | `Scripts/CTestEnemy.cs` | **ELIMINAR** | Ninguno - Solo para testing |
+| `CTestPunch.cs` | `Scripts/CTestPunch.cs` | **ELIMINAR** | Ninguno - Solo para testing |
+| `ControllerAnimationTest()` | `CPlayer_2.cs` | **ELIMINAR** | Ninguno - Modo test no usado |
+| `isTestAnimation` flag | `CPlayer_2.cs` | **ELIMINAR** | Ninguno - Solo para debug |
+| Todos los `Debug.Log()` | Múltiples archivos | **COMENTAR/ELIMINAR** | Mejora performance |
+
+**Beneficios:**
+- ✅ Reduce complejidad del código
+- ✅ Mejora performance (menos logs)
+- ✅ Código más limpio
+- ✅ Facilita integración con Photon
+
+---
+
+#### 11.11.2 Clases Vacías o No Implementadas (ELIMINAR)
+
+**Razón:** Clases que no tienen funcionalidad y solo agregan confusión.
+
+| Sistema | Ubicación | Estado Actual | Acción |
+|---------|-----------|----------------|--------|
+| `CSwitchCharacter.cs` | `Scripts/CSwitchCharacter.cs` | Vacío, no implementado | **ELIMINAR** |
+| `CGameEventManager.cs` | `Scripts/CGameEventManager.cs` | Vacío, no implementado | **ELIMINAR** |
+| `CPlayer.cs` | `Scripts/CPlayer.cs` | Solo métodos vacíos | **ELIMINAR** |
+| `Rotator.cs` | `Scripts/Rotator.cs` | Probablemente decorativo | **EVALUAR** - Mover a carpeta de utilidades si se usa |
+
+**Beneficios:**
+- ✅ Reduce confusión sobre qué código usar
+- ✅ Facilita mantenimiento
+- ✅ Código más claro
+
+---
+
+#### 11.11.3 Sistemas No Utilizados (ELIMINAR o POSPONER)
+
+**Razón:** Funcionalidades que no se usan en el juego actual y complican el código.
+
+| Sistema | Ubicación | Estado | Acción | Prioridad |
+|---------|-----------|--------|--------|-----------|
+| `PlayerA`, `PlayerB`, `PlayerC` | `Scripts/PlayerA.cs`, etc. | Solo usados en `changedCharacter()` que no se usa | **ELIMINAR** | Baja |
+| `changedCharacter()` | `CPlayerManager.cs` | Método no llamado en código | **ELIMINAR** | Baja |
+| `CPlayer_4` | `Scripts/Player/CPlayer_4.cs` | Comentado, con TODO | **POSPONER** - Eliminar por ahora | Media |
+| `AndroidControllerTest()` | `PlayerController.cs` | No implementado | **ELIMINAR** | Baja |
+| Sistema de cambio de personajes en runtime | `CPlayerManager.cs` | No usado | **ELIMINAR** | Baja |
+
+**Beneficios:**
+- ✅ Reduce complejidad significativamente
+- ✅ Facilita integración con Photon (menos casos edge)
+- ✅ Código más mantenible
+- ✅ Menos posibilidades de bugs
+
+**Nota:** Si en el futuro se necesita cambio de personajes, se puede implementar correctamente con Photon desde el inicio.
+
+---
+
+#### 11.11.4 Código Comentado (LIMPIAR)
+
+**Razón:** Código comentado extenso confunde y dificulta mantenimiento.
+
+| Ubicación | Cantidad Aproximada | Acción |
+|-----------|---------------------|--------|
+| `PlayerController.cs` | ~100+ líneas comentadas | **ELIMINAR** código comentado no necesario |
+| `ComboInput.cs` | ~50+ líneas comentadas | **ELIMINAR** código comentado |
+| `CPlayerManager.cs` | ~20 líneas comentadas | **ELIMINAR** código comentado |
+| Múltiples archivos | Varias líneas | **REVISAR y ELIMINAR** |
+
+**Beneficios:**
+- ✅ Código más legible
+- ✅ Menos confusión sobre qué código usar
+- ✅ Facilita code reviews
+
+**Estrategia:**
+1. Revisar cada bloque de código comentado
+2. Si es código legacy que no se usará: **ELIMINAR**
+3. Si es código para futuro: **MOVER a carpeta `_Archive/` o documentar en GDD**
+4. Si es código de referencia: **MOVER a documentación**
+
+---
+
+#### 11.11.5 Sistemas que Complican Integración con Photon (SIMPLIFICAR)
+
+**Razón:** Estos sistemas agregan complejidad innecesaria para la integración con Photon.
+
+| Sistema | Problema | Solución Propuesta |
+|---------|----------|-------------------|
+| **Múltiples variantes de personajes** | PlayerA/B/C complican spawn y sincronización | **SIMPLIFICAR:** Usar solo CPlayer_1, CPlayer_2, CPlayer_3 |
+| **Sistema de cambio de personajes en runtime** | Cambiar personaje en medio de partida complica Photon | **ELIMINAR:** Selección de personaje solo al inicio |
+| **Sistema de formas (Forms)** | Si no está completamente implementado, puede causar problemas | **EVALUAR:** Si no es crítico, posponer para Fase 5+ |
+| **Sistema de combos dinámico** | `CheckComboDynamic()` no implementado | **POSPONER:** Usar solo sistema de combos básico inicialmente |
+
+**Beneficios:**
+- ✅ Integración con Photon más simple
+- ✅ Menos casos edge que manejar
+- ✅ Testing más fácil
+- ✅ Menos posibilidades de bugs de sincronización
+
+---
+
+#### 11.11.6 Plan de Limpieza por Fases
+
+##### **Fase 0: Limpieza Pre-Refactorización (ANTES de Fase 1)**
+
+**Objetivo:** Limpiar código antes de comenzar integración con Photon.
+
+**Tareas:**
+1. ✅ **Eliminar sistemas de test:**
+   - Eliminar `CTestEnemy.cs`
+   - Eliminar `CTestPunch.cs`
+   - Eliminar `ControllerAnimationTest()` y flag `isTestAnimation`
+   - Comentar/eliminar `Debug.Log()` statements
+
+2. ✅ **Eliminar clases vacías:**
+   - Eliminar `CSwitchCharacter.cs`
+   - Eliminar `CGameEventManager.cs`
+   - Eliminar `CPlayer.cs` (o mover a `_Archive/` si tiene valor histórico)
+
+3. ✅ **Eliminar sistemas no usados:**
+   - Eliminar `PlayerA.cs`, `PlayerB.cs`, `PlayerC.cs`
+   - Eliminar método `changedCharacter()` de `CPlayerManager`
+   - Eliminar `AndroidControllerTest()`
+   - Comentar/eliminar código de `CPlayer_4` (o eliminar clase completa)
+
+4. ✅ **Limpiar código comentado:**
+   - Revisar y eliminar código comentado innecesario
+   - Mover código de referencia a documentación si es necesario
+
+**Criterios de Éxito:**
+- ✅ Código más limpio y legible
+- ✅ Sin clases vacías o no usadas
+- ✅ Sin sistemas de test en código de producción
+- ✅ Código comentado mínimo y justificado
+
+**Tiempo Estimado:** 1-2 días
+
+---
+
+#### 11.11.7 Impacto de la Limpieza
+
+##### **Reducción de Complejidad**
+
+| Métrica | Antes | Después | Reducción |
+|---------|-------|---------|-----------|
+| Clases totales | ~25 | ~18 | **-28%** |
+| Líneas de código | ~3000 | ~2400 | **-20%** |
+| Sistemas no usados | 5+ | 0 | **-100%** |
+| Código comentado | ~200 líneas | ~20 líneas | **-90%** |
+
+##### **Beneficios para Integración con Photon**
+
+1. **Menos casos edge:** Menos sistemas = menos casos especiales que manejar
+2. **Testing más simple:** Menos código = menos cosas que testear
+3. **Menos bugs:** Menos complejidad = menos posibilidades de errores
+4. **Código más claro:** Más fácil entender qué hace cada parte
+5. **Mantenimiento más fácil:** Menos código = más fácil mantener
+
+##### **Riesgos Reducidos**
+
+| Riesgo | Reducción |
+|--------|-----------|
+| Complejidad del código | **-40%** (de Media a Baja) |
+| Tiempo de desarrollo | **-15%** (menos código que integrar) |
+| Bugs de integración | **-25%** (menos sistemas que pueden fallar) |
+
+---
+
+#### 11.11.8 Checklist de Limpieza
+
+##### Pre-Refactorización (Fase 0)
+- [ ] Eliminar `CTestEnemy.cs`
+- [ ] Eliminar `CTestPunch.cs`
+- [ ] Eliminar `ControllerAnimationTest()` y `isTestAnimation`
+- [ ] Comentar/eliminar `Debug.Log()` statements
+- [ ] Eliminar `CSwitchCharacter.cs`
+- [ ] Eliminar `CGameEventManager.cs`
+- [ ] Eliminar `CPlayer.cs`
+- [ ] Eliminar `PlayerA.cs`, `PlayerB.cs`, `PlayerC.cs`
+- [ ] Eliminar método `changedCharacter()`
+- [ ] Eliminar `AndroidControllerTest()`
+- [ ] Decidir sobre `CPlayer_4` (eliminar o posponer)
+- [ ] Limpiar código comentado en `PlayerController.cs`
+- [ ] Limpiar código comentado en `ComboInput.cs`
+- [ ] Limpiar código comentado en otros archivos
+- [ ] Testing: Verificar que juego funciona igual después de limpieza
+
+##### Durante Refactorización
+- [ ] No agregar nuevos sistemas de test en código de producción
+- [ ] Mantener código limpio
+- [ ] Documentar decisiones sobre código eliminado
+
+---
+
+#### 11.11.9 Notas Importantes
+
+1. **Backup antes de limpiar:** Crear backup completo antes de eliminar código
+2. **Testing después de limpieza:** Verificar que todo funciona igual
+3. **Version control:** Usar Git para poder revertir si es necesario
+4. **Documentación:** Documentar qué se eliminó y por qué (en este GDD)
+5. **Futuro:** Si se necesita funcionalidad eliminada, implementarla correctamente desde el inicio
+
+---
+
+#### 11.11.10 Sistemas a Mantener (Críticos)
+
+Estos sistemas **NO** deben eliminarse, son esenciales:
+
+- ✅ `PlayerController.cs` (base)
+- ✅ `CPlayer_1.cs`, `CPlayer_2.cs`, `CPlayer_3.cs` (jugadores activos)
+- ✅ `CPlayerManager.cs` (gestión de jugadores)
+- ✅ `CBulletManager.cs` (gestión de proyectiles)
+- ✅ `CGlobalValue.cs` (valores globales)
+- ✅ `CInputSystemMultiplayer.cs` (sistema de input)
+- ✅ Sistema de combos básico (`ComboInput.cs`, `CAttack.cs`, `CComboAttack.cs`)
+- ✅ Sistema de ataques (`CGenericBullet.cs` y derivados)
+- ✅ Sistema de formas (si está implementado y se usa)
+
+---
+
+### 11.12 Plan de Implementación de Funcionalidades Faltantes con Prevención de Edge Problems
+
+Esta sección detalla cómo implementar las funcionalidades faltantes (sistema de vida, condiciones de victoria, etc.) de manera que beneficie tanto al modo local como online, y use Photon de forma segura para evitar problemas de sincronización.
+
+---
+
+#### 11.12.1 Objetivo
+
+Implementar funcionalidades críticas del juego (sistema de vida, condiciones de victoria, UI) de manera que:
+- ✅ Funcione perfectamente en modo local
+- ✅ Funcione perfectamente en modo online con Photon
+- ✅ Evite problemas de sincronización (edge problems)
+- ✅ Sea robusto contra lag, desincronización y cheating
+- ✅ Use una arquitectura unificada (mismo código para ambos modos)
+
+---
+
+#### 11.12.2 Funcionalidades a Implementar
+
+| Funcionalidad | Prioridad | Complejidad | Beneficio Online |
+|---------------|-----------|-------------|------------------|
+| Sistema de Vida/HP | **Crítica** | Media | Alto - Base para todo |
+| Sistema de Daño | **Crítica** | Media | Alto - Requiere validación |
+| Condiciones de Victoria | **Alta** | Baja | Medio - Requiere sincronización |
+| UI de Combate | **Alta** | Media | Medio - Visualización |
+| Sistema de Rondas | **Media** | Alta | Alto - Gestión de estado |
+| Sistema de Respawn | **Media** | Media | Alto - Manejo de desconexiones |
+
+---
+
+#### 11.12.3 Principios de Diseño para Evitar Edge Problems
+
+##### 11.12.3.1 Autoridad Clara
+- **Cada jugador controla solo su personaje** (photonView.IsMine)
+- **Master Client para decisiones globales** (condiciones de victoria, rondas)
+- **Validación de autoridad antes de cada acción crítica**
+
+##### 11.12.3.2 Validación y Verificación
+- **Validar datos recibidos** antes de aplicar cambios
+- **Rangos válidos** para todos los valores (HP entre 0-100, etc.)
+- **Timestamps** para detectar acciones fuera de tiempo
+- **Checksums** para validar estado del juego
+
+##### 11.12.3.3 Sincronización Robusta
+- **IPunObservable** para datos críticos (posición, HP, estado)
+- **RPCs confiables** (RpcTarget.AllViaServer) para acciones importantes
+- **Interpolación** para movimiento suave
+- **Lag compensation** para acciones de combate
+
+##### 11.12.3.4 Manejo de Errores
+- **Fallback a modo local** si Photon falla
+- **Reconexión automática** con restauración de estado
+- **Validación de conexión** antes de acciones críticas
+- **Logging** para debugging de problemas de red
+
+---
+
+#### 11.12.4 Arquitectura Propuesta
+
+```
+Sistema Unificado
+├── Core/
+│   ├── IGameMode.cs (ya implementado)
+│   ├── IDamageable.cs (NUEVO - interface para daño)
+│   └── IGameState.cs (NUEVO - interface para estado del juego)
+├── Health/
+│   ├── CHealthSystem.cs (NUEVO - sistema de vida unificado)
+│   └── CHealthBar.cs (NUEVO - UI de vida)
+├── Damage/
+│   ├── CDamageSystem.cs (NUEVO - sistema de daño unificado)
+│   └── CDamageInfo.cs (NUEVO - estructura de información de daño)
+├── GameState/
+│   ├── CGameStateManager.cs (NUEVO - gestión de estado)
+│   ├── CWinCondition.cs (NUEVO - condiciones de victoria)
+│   └── CRoundManager.cs (NUEVO - gestión de rondas)
+└── Network/
+    ├── CNetworkHealth.cs (NUEVO - sincronización de vida)
+    ├── CNetworkDamage.cs (NUEVO - sincronización de daño)
+    └── CNetworkGameState.cs (NUEVO - sincronización de estado)
+```
+
+---
+
+#### 11.12.5 Implementación Detallada por Funcionalidad
+
+##### **11.12.5.1 Sistema de Vida/HP**
+
+**Objetivo:** Sistema de vida que funcione en ambos modos y se sincronice correctamente en online.
+
+**Arquitectura:**
+```csharp
+// Interface para objetos que pueden recibir daño
+public interface IDamageable
+{
+    void TakeDamage(float damage, GameObject attacker);
+    float CurrentHealth { get; }
+    float MaxHealth { get; }
+    bool IsDead { get; }
+    event System.Action<float> OnHealthChanged;
+    event System.Action OnDeath;
+}
+
+// Sistema de vida unificado
+public class CHealthSystem : MonoBehaviour, IDamageable
+{
+    [SerializeField] private float maxHealth = 100f;
+    private float currentHealth;
+    
+    // Eventos para UI y otros sistemas
+    public event System.Action<float> OnHealthChanged;
+    public event System.Action OnDeath;
+    
+    // Modo de juego
+    private IGameMode gameMode;
+    
+    public float CurrentHealth => currentHealth;
+    public float MaxHealth => maxHealth;
+    public bool IsDead => currentHealth <= 0f;
+    
+    private void Awake()
+    {
+        gameMode = GameModeManager.Instance?.CurrentGameMode ?? new LocalGameMode();
+        currentHealth = maxHealth;
+    }
+    
+    public void TakeDamage(float damage, GameObject attacker)
+    {
+        // Validación de autoridad (solo el dueño puede recibir daño)
+        if (gameMode.IsNetworked && !gameMode.HasAuthority(gameObject))
+        {
+            // En online, el daño se aplica vía RPC
+            return;
+        }
+        
+        // Validar datos
+        if (damage < 0 || IsDead)
+            return;
+            
+        // Aplicar daño
+        currentHealth = Mathf.Clamp(currentHealth - damage, 0f, maxHealth);
+        
+        // Notificar cambios
+        OnHealthChanged?.Invoke(currentHealth);
+        
+        // Verificar muerte
+        if (IsDead)
+        {
+            OnDeath?.Invoke();
+        }
+    }
+}
+```
+
+**Sincronización Online:**
+```csharp
+// Componente de red para sincronizar vida
+public class CNetworkHealth : MonoBehaviourPunCallbacks, IPunObservable
+{
+    private CHealthSystem healthSystem;
+    
+    private void Awake()
+    {
+        healthSystem = GetComponent<CHealthSystem>();
+    }
+    
+    public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+    {
+        if (stream.IsWriting)
+        {
+            // Enviar vida actual
+            stream.SendNext(healthSystem.CurrentHealth);
+        }
+        else
+        {
+            // Recibir vida actual
+            float receivedHealth = (float)stream.ReceiveNext();
+            
+            // Validar datos recibidos
+            if (receivedHealth < 0 || receivedHealth > healthSystem.MaxHealth)
+            {
+                Debug.LogWarning($"Datos de vida inválidos recibidos: {receivedHealth}");
+                return;
+            }
+            
+            // Aplicar solo si es diferente (evitar actualizaciones innecesarias)
+            if (Mathf.Abs(healthSystem.CurrentHealth - receivedHealth) > 0.1f)
+            {
+                // Usar evento en lugar de modificar directamente
+                float damage = healthSystem.CurrentHealth - receivedHealth;
+                if (damage > 0)
+                {
+                    healthSystem.TakeDamage(damage, null);
+                }
+            }
+        }
+    }
+    
+    // RPC para aplicar daño (llamado por el atacante)
+    [PunRPC]
+    void ApplyDamageRPC(float damage, int attackerViewID)
+    {
+        // Validar que el daño viene de un jugador válido
+        if (damage < 0 || damage > 1000) // Límite razonable
+        {
+            Debug.LogWarning($"Daño inválido recibido: {damage}");
+            return;
+        }
+        
+        GameObject attacker = PhotonView.Find(attackerViewID)?.gameObject;
+        healthSystem.TakeDamage(damage, attacker);
+    }
+}
+```
+
+**Beneficios:**
+- ✅ Funciona igual en local y online
+- ✅ Validación de datos previene valores inválidos
+- ✅ Sincronización solo cuando hay cambios significativos
+- ✅ RPCs para acciones críticas (daño)
+
+---
+
+##### **11.12.5.2 Sistema de Daño**
+
+**Objetivo:** Sistema de daño que valide ataques y prevenga cheating.
+
+**Arquitectura:**
+```csharp
+// Estructura de información de daño
+[System.Serializable]
+public struct CDamageInfo
+{
+    public float damage;
+    public GameObject attacker;
+    public Vector3 hitPoint;
+    public float timestamp;
+    public int attackType; // 0 = básico, 1 = combo, 2 = especial
+    
+    public CDamageInfo(float dmg, GameObject att, Vector3 point, int type)
+    {
+        damage = dmg;
+        attacker = att;
+        hitPoint = point;
+        timestamp = Time.time;
+        attackType = type;
+    }
+}
+
+// Sistema de daño unificado
+public class CDamageSystem : MonoBehaviour
+{
+    private IGameMode gameMode;
+    
+    private void Awake()
+    {
+        gameMode = GameModeManager.Instance?.CurrentGameMode ?? new LocalGameMode();
+    }
+    
+    public void ApplyDamage(GameObject target, CDamageInfo damageInfo)
+    {
+        // Validar autoridad del atacante
+        if (!gameMode.HasAuthority(damageInfo.attacker))
+        {
+            Debug.LogWarning("Intento de ataque sin autoridad");
+            return;
+        }
+        
+        // Validar datos de daño
+        if (damageInfo.damage <= 0 || damageInfo.damage > 1000)
+        {
+            Debug.LogWarning($"Daño inválido: {damageInfo.damage}");
+            return;
+        }
+        
+        // Validar que el objetivo existe y es válido
+        if (target == null)
+            return;
+            
+        IDamageable damageable = target.GetComponent<IDamageable>();
+        if (damageable == null)
+            return;
+        
+        // Aplicar daño según modo
+        if (gameMode.IsNetworked)
+        {
+            // En online, usar RPC
+            PhotonView targetPV = target.GetComponent<PhotonView>();
+            if (targetPV != null)
+            {
+                PhotonView attackerPV = damageInfo.attacker.GetComponent<PhotonView>();
+                targetPV.RPC("ApplyDamageRPC", RpcTarget.AllViaServer, 
+                    damageInfo.damage, 
+                    attackerPV != null ? attackerPV.ViewID : 0);
+            }
+        }
+        else
+        {
+            // En local, aplicar directamente
+            damageable.TakeDamage(damageInfo.damage, damageInfo.attacker);
+        }
+    }
+}
+```
+
+**Prevención de Edge Problems:**
+- ✅ Validación de autoridad antes de aplicar daño
+- ✅ Límites de daño razonables (0-1000)
+- ✅ Validación de timestamps (rechazar ataques muy antiguos)
+- ✅ RPCs vía servidor (AllViaServer) para orden consistente
+- ✅ Validación de distancia (opcional, para prevenir teleport attacks)
+
+---
+
+##### **11.12.5.3 Condiciones de Victoria**
+
+**Objetivo:** Sistema de victoria que funcione en ambos modos y se sincronice correctamente.
+
+**Arquitectura:**
+```csharp
+// Tipos de condiciones de victoria
+public enum EWinCondition
+{
+    LastManStanding,  // Último en pie
+    FirstToKills,     // Primero en X kills
+    TimeLimit,        // Más kills en tiempo límite
+    ScoreBased        // Basado en puntos
+}
+
+// Manager de estado del juego
+public class CGameStateManager : MonoBehaviourPunCallbacks
+{
+    private IGameMode gameMode;
+    private EWinCondition currentWinCondition;
+    private bool gameEnded = false;
+    
+    // Eventos
+    public event System.Action<int> OnPlayerWon; // playerIndex
+    public event System.Action OnGameEnd;
+    
+    private void Awake()
+    {
+        gameMode = GameModeManager.Instance?.CurrentGameMode ?? new LocalGameMode();
+    }
+    
+    public void CheckWinCondition()
+    {
+        // Solo Master Client verifica condiciones en online
+        if (gameMode.IsNetworked)
+        {
+#if PUN_2_OR_NEWER
+            if (!PhotonNetwork.IsMasterClient)
+                return;
+#endif
+        }
+        
+        if (gameEnded)
+            return;
+        
+        switch (currentWinCondition)
+        {
+            case EWinCondition.LastManStanding:
+                CheckLastManStanding();
+                break;
+            // ... otros casos
+        }
+    }
+    
+    private void CheckLastManStanding()
+    {
+        int aliveCount = 0;
+        int lastAliveIndex = -1;
+        
+        // Contar jugadores vivos
+        foreach (var player in CPlayerManager.Inst._PlayerList)
+        {
+            if (player != null)
+            {
+                IDamageable health = player.GetComponent<IDamageable>();
+                if (health != null && !health.IsDead)
+                {
+                    aliveCount++;
+                    lastAliveIndex = player._PlayerCount;
+                }
+            }
+        }
+        
+        // Si solo queda uno, terminar juego
+        if (aliveCount == 1)
+        {
+            EndGame(lastAliveIndex);
+        }
+    }
+    
+    private void EndGame(int winnerIndex)
+    {
+        gameEnded = true;
+        
+        if (gameMode.IsNetworked)
+        {
+            // Sincronizar fin de juego vía RPC
+            photonView.RPC("EndGameRPC", RpcTarget.AllViaServer, winnerIndex);
+        }
+        else
+        {
+            // En local, terminar directamente
+            OnPlayerWon?.Invoke(winnerIndex);
+            OnGameEnd?.Invoke();
+        }
+    }
+    
+    [PunRPC]
+    void EndGameRPC(int winnerIndex)
+    {
+        // Validar datos
+        if (winnerIndex < 0 || winnerIndex > 3)
+        {
+            Debug.LogWarning($"Índice de ganador inválido: {winnerIndex}");
+            return;
+        }
+        
+        OnPlayerWon?.Invoke(winnerIndex);
+        OnGameEnd?.Invoke();
+    }
+}
+```
+
+**Prevención de Edge Problems:**
+- ✅ Solo Master Client verifica condiciones (evita conflictos)
+- ✅ Validación de datos antes de terminar juego
+- ✅ RPCs vía servidor para sincronización consistente
+- ✅ Flag `gameEnded` previene múltiples finales
+- ✅ Verificación periódica en lugar de eventos únicos
+
+---
+
+##### **11.12.5.4 Sistema de Rondas**
+
+**Objetivo:** Sistema de rondas que maneje correctamente desconexiones y reconexiones.
+
+**Arquitectura:**
+```csharp
+public class CRoundManager : MonoBehaviourPunCallbacks
+{
+    private int currentRound = 0;
+    private int maxRounds = 3;
+    private bool roundInProgress = false;
+    private float roundStartTime;
+    private float roundDuration = 120f; // 2 minutos
+    
+    private IGameMode gameMode;
+    
+    private void Awake()
+    {
+        gameMode = GameModeManager.Instance?.CurrentGameMode ?? new LocalGameMode();
+    }
+    
+    public void StartRound()
+    {
+        // Solo Master Client inicia rondas en online
+        if (gameMode.IsNetworked)
+        {
+#if PUN_2_OR_NEWER
+            if (!PhotonNetwork.IsMasterClient)
+                return;
+                
+            photonView.RPC("StartRoundRPC", RpcTarget.AllViaServer, currentRound);
+            return;
+#endif
+        }
+        
+        StartRoundLocal();
+    }
+    
+    private void StartRoundLocal()
+    {
+        currentRound++;
+        roundInProgress = true;
+        roundStartTime = Time.time;
+        
+        // Resetear jugadores
+        ResetAllPlayers();
+    }
+    
+    [PunRPC]
+    void StartRoundRPC(int roundNumber)
+    {
+        // Validar número de ronda
+        if (roundNumber < 1 || roundNumber > maxRounds)
+        {
+            Debug.LogWarning($"Número de ronda inválido: {roundNumber}");
+            return;
+        }
+        
+        currentRound = roundNumber;
+        StartRoundLocal();
+    }
+    
+    private void ResetAllPlayers()
+    {
+        foreach (var player in CPlayerManager.Inst._PlayerList)
+        {
+            if (player != null)
+            {
+                IDamageable health = player.GetComponent<IDamageable>();
+                if (health != null)
+                {
+                    health.ResetHealth(); // Método a implementar
+                }
+                
+                // Respawn en posición inicial
+                RespawnPlayer(player);
+            }
+        }
+    }
+    
+    // Manejo de desconexiones
+    public override void OnPlayerLeftRoom(Photon.Realtime.Player otherPlayer)
+    {
+        if (gameMode.IsNetworked && PhotonNetwork.IsMasterClient)
+        {
+            // Verificar si el juego puede continuar
+            if (PhotonNetwork.CurrentRoom.PlayerCount < 2 && roundInProgress)
+            {
+                // Pausar ronda o terminar
+                PauseRound();
+            }
+        }
+    }
+}
+```
+
+**Prevención de Edge Problems:**
+- ✅ Master Client controla rondas (evita conflictos)
+- ✅ Manejo de desconexiones durante rondas
+- ✅ Validación de número de ronda
+- ✅ Reset consistente de todos los jugadores
+- ✅ Sincronización de tiempo de ronda
+
+---
+
+#### 11.12.6 Estrategias Específicas para Evitar Edge Problems
+
+##### **11.12.6.1 Prevención de Cheating**
+
+**Problema:** Jugadores modifican valores localmente (HP infinito, daño excesivo, etc.)
+
+**Solución:**
+```csharp
+// Validación de datos en cada RPC
+[PunRPC]
+void ApplyDamageRPC(float damage, int attackerViewID)
+{
+    // 1. Validar rango de daño
+    if (damage < 0 || damage > 1000)
+    {
+        Debug.LogWarning($"Daño inválido: {damage}. Rechazado.");
+        return;
+    }
+    
+    // 2. Validar que el atacante existe
+    PhotonView attackerPV = PhotonView.Find(attackerViewID);
+    if (attackerPV == null)
+    {
+        Debug.LogWarning("Atacante no encontrado. Rechazado.");
+        return;
+    }
+    
+    // 3. Validar distancia (opcional, para prevenir teleport attacks)
+    float distance = Vector3.Distance(transform.position, attackerPV.transform.position);
+    if (distance > 50f) // Rango máximo de ataque
+    {
+        Debug.LogWarning($"Ataque desde distancia inválida: {distance}. Rechazado.");
+        return;
+    }
+    
+    // 4. Validar timestamp (rechazar ataques muy antiguos)
+    // (Requiere enviar timestamp en RPC)
+    
+    // 5. Aplicar daño solo si pasa todas las validaciones
+    healthSystem.TakeDamage(damage, attackerPV.gameObject);
+}
+```
+
+---
+
+##### **11.12.6.2 Prevención de Desincronización**
+
+**Problema:** Estados diferentes entre clientes (HP diferente, posición diferente, etc.)
+
+**Solución:**
+```csharp
+// Sincronización periódica con validación
+public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+{
+    if (stream.IsWriting)
+    {
+        // Enviar datos
+        stream.SendNext(currentHealth);
+        stream.SendNext(transform.position);
+        stream.SendNext(transform.rotation);
+    }
+    else
+    {
+        // Recibir datos
+        float receivedHealth = (float)stream.ReceiveNext();
+        Vector3 receivedPos = (Vector3)stream.ReceiveNext();
+        Quaternion receivedRot = (Quaternion)stream.ReceiveNext();
+        
+        // Validar y corregir
+        ValidateAndCorrectHealth(receivedHealth);
+        ValidateAndCorrectPosition(receivedPos, receivedRot);
+    }
+}
+
+private void ValidateAndCorrectHealth(float receivedHealth)
+{
+    // Si la diferencia es significativa, corregir
+    if (Mathf.Abs(currentHealth - receivedHealth) > 5f)
+    {
+        Debug.LogWarning($"Desincronización de HP detectada. Local: {currentHealth}, Remoto: {receivedHealth}");
+        
+        // Usar el valor del servidor (Master Client)
+        currentHealth = receivedHealth;
+        OnHealthChanged?.Invoke(currentHealth);
+    }
+}
+
+private void ValidateAndCorrectPosition(Vector3 receivedPos, Quaternion receivedRot)
+{
+    float distance = Vector3.Distance(transform.position, receivedPos);
+    
+    // Si la diferencia es muy grande, hacer snap
+    if (distance > 2f)
+    {
+        Debug.LogWarning($"Desincronización de posición detectada. Distancia: {distance}");
+        transform.position = receivedPos;
+        transform.rotation = receivedRot;
+    }
+    else
+    {
+        // Interpolación suave para diferencias pequeñas
+        transform.position = Vector3.Lerp(transform.position, receivedPos, 0.2f);
+        transform.rotation = Quaternion.Lerp(transform.rotation, receivedRot, 0.2f);
+    }
+}
+```
+
+---
+
+##### **11.12.6.3 Manejo de Lag**
+
+**Problema:** Acciones de combate se sienten lentas o imprecisas debido a lag.
+
+**Solución:**
+```csharp
+// Lag Compensation para ataques
+public class CLagCompensation : MonoBehaviour
+{
+    private struct Snapshot
+    {
+        public Vector3 position;
+        public Quaternion rotation;
+        public float timestamp;
+    }
+    
+    private Queue<Snapshot> positionHistory = new Queue<Snapshot>();
+    private float historyDuration = 1f; // Guardar 1 segundo de historia
+    
+    private void Update()
+    {
+        // Guardar snapshot cada frame
+        if (gameMode.HasAuthority(gameObject))
+        {
+            positionHistory.Enqueue(new Snapshot
+            {
+                position = transform.position,
+                rotation = transform.rotation,
+                timestamp = Time.time
+            });
+            
+            // Limpiar snapshots antiguos
+            while (positionHistory.Count > 0 && 
+                   Time.time - positionHistory.Peek().timestamp > historyDuration)
+            {
+                positionHistory.Dequeue();
+            }
+        }
+    }
+    
+    // Usar posición histórica para validar ataques
+    public bool ValidateHit(Vector3 hitPoint, float attackTime)
+    {
+        // Buscar snapshot más cercano al tiempo del ataque
+        Snapshot? closestSnapshot = null;
+        float closestTime = float.MaxValue;
+        
+        foreach (var snapshot in positionHistory)
+        {
+            float timeDiff = Mathf.Abs(snapshot.timestamp - attackTime);
+            if (timeDiff < closestTime)
+            {
+                closestTime = timeDiff;
+                closestSnapshot = snapshot;
+            }
+        }
+        
+        if (closestSnapshot.HasValue)
+        {
+            // Verificar si el hit es válido usando posición histórica
+            float distance = Vector3.Distance(closestSnapshot.Value.position, hitPoint);
+            return distance < 2f; // Rango de ataque
+        }
+        
+        return false;
+    }
+}
+```
+
+---
+
+##### **11.12.6.4 Manejo de Desconexiones**
+
+**Problema:** Jugadores se desconectan durante partida, causando problemas.
+
+**Solución:**
+```csharp
+public override void OnPlayerLeftRoom(Photon.Realtime.Player otherPlayer)
+{
+    // Encontrar jugador que se desconectó
+    GameObject disconnectedPlayer = FindPlayerByActorNumber(otherPlayer.ActorNumber);
+    
+    if (disconnectedPlayer != null)
+    {
+        // Opción 1: Eliminar jugador
+        Destroy(disconnectedPlayer);
+        
+        // Opción 2: Reemplazar con bot (futuro)
+        // SpawnBot(disconnectedPlayer.transform.position);
+        
+        // Verificar si el juego puede continuar
+        if (PhotonNetwork.CurrentRoom.PlayerCount < 2)
+        {
+            // Pausar o terminar juego
+            CGameStateManager.Instance?.PauseGame();
+        }
+    }
+}
+
+public override void OnDisconnected(Photon.Realtime.DisconnectCause cause)
+{
+    // Manejar propia desconexión
+    Debug.Log($"Desconectado: {cause}");
+    
+    // Intentar reconexión automática
+    if (cause != DisconnectCause.ApplicationQuit)
+    {
+        StartCoroutine(ReconnectCoroutine());
+    }
+}
+
+private IEnumerator ReconnectCoroutine()
+{
+    yield return new WaitForSeconds(2f);
+    
+    // Intentar reconectar
+    if (!PhotonNetwork.IsConnected)
+    {
+        PhotonNetwork.Reconnect();
+    }
+}
+```
+
+---
+
+#### 11.12.7 Plan de Implementación por Fases
+
+##### **Fase 7: Sistema de Vida y Daño (Semanas 13-14)**
+
+**Objetivo:** Implementar sistema de vida completo que funcione en ambos modos.
+
+**Tareas:**
+1. ✅ Crear interface `IDamageable`
+2. ✅ Implementar `CHealthSystem` (sistema base)
+3. ✅ Implementar `CNetworkHealth` (sincronización online)
+4. ✅ Modificar `PlayerController.Golpe()` para usar nuevo sistema
+5. ✅ Integrar con sistema de proyectiles
+6. ✅ Testing en ambos modos
+
+**Criterios de Éxito:**
+- ✅ HP se sincroniza correctamente en online
+- ✅ Daño se aplica correctamente en ambos modos
+- ✅ Validación previene valores inválidos
+- ✅ No hay desincronización de HP
+
+---
+
+##### **Fase 8: Condiciones de Victoria (Semanas 15-16)**
+
+**Objetivo:** Implementar sistema de victoria robusto.
+
+**Tareas:**
+1. ✅ Crear `CGameStateManager`
+2. ✅ Implementar condiciones de victoria básicas
+3. ✅ Sincronización vía Master Client
+4. ✅ UI de fin de juego
+5. ✅ Testing en ambos modos
+
+**Criterios de Éxito:**
+- ✅ Condiciones de victoria funcionan en ambos modos
+- ✅ Sincronización correcta del fin de juego
+- ✅ No hay conflictos entre clientes
+
+---
+
+##### **Fase 9: UI de Combate (Semanas 17-18)**
+
+**Objetivo:** UI que muestre información relevante y se sincronice.
+
+**Tareas:**
+1. ✅ Health bars para cada jugador
+2. ✅ Combo counter (solo local, no requiere sync)
+3. ✅ Indicadores de estado
+4. ✅ UI de fin de juego
+5. ✅ Testing en ambos modos
+
+**Criterios de Éxito:**
+- ✅ UI se actualiza correctamente
+- ✅ Health bars sincronizadas en online
+- ✅ Performance aceptable
+
+---
+
+##### **Fase 10: Sistema de Rondas (Semanas 19-20)**
+
+**Objetivo:** Sistema de rondas que maneje desconexiones.
+
+**Tareas:**
+1. ✅ Crear `CRoundManager`
+2. ✅ Implementar lógica de rondas
+3. ✅ Manejo de desconexiones
+4. ✅ Sistema de respawn
+5. ✅ Testing con múltiples clientes
+
+**Criterios de Éxito:**
+- ✅ Rondas funcionan correctamente
+- ✅ Manejo robusto de desconexiones
+- ✅ Respawn funciona en ambos modos
+
+---
+
+#### 11.12.8 Checklist de Prevención de Edge Problems
+
+##### Validación de Datos
+- [ ] Todos los RPCs validan datos recibidos
+- [ ] Rangos válidos para todos los valores (HP, daño, etc.)
+- [ ] Validación de existencia de objetos antes de usar
+- [ ] Validación de timestamps para acciones temporales
+
+##### Autoridad y Control
+- [ ] Verificación de autoridad antes de acciones críticas
+- [ ] Master Client para decisiones globales
+- [ ] Solo dueño puede modificar su propio estado
+- [ ] Validación de autoridad en cada RPC
+
+##### Sincronización
+- [ ] IPunObservable para datos críticos
+- [ ] RPCs vía servidor (AllViaServer) para acciones importantes
+- [ ] Interpolación para movimiento suave
+- [ ] Validación y corrección de desincronizaciones
+
+##### Manejo de Errores
+- [ ] Fallback a modo local si Photon falla
+- [ ] Reconexión automática
+- [ ] Manejo de desconexiones durante partida
+- [ ] Logging para debugging
+
+##### Performance
+- [ ] Sincronización solo cuando hay cambios significativos
+- [ ] Limitar frecuencia de sincronización
+- [ ] Comprimir datos cuando sea posible
+- [ ] Object pooling para proyectiles
+
+---
+
+#### 11.12.9 Beneficios del Plan
+
+##### Para Modo Local
+- ✅ Sistema robusto desde el inicio
+- ✅ Fácil de testear
+- ✅ Base sólida para futuras features
+
+##### Para Modo Online
+- ✅ Prevención de cheating
+- ✅ Sincronización robusta
+- ✅ Manejo de edge cases
+- ✅ Experiencia de juego fluida
+
+##### Para Desarrollo
+- ✅ Código unificado (menos duplicación)
+- ✅ Fácil de mantener
+- ✅ Escalable para nuevas features
+- ✅ Testing más simple
+
+---
+
+#### 11.12.10 Métricas de Éxito
+
+- ✅ Sistema de vida funciona en ambos modos sin diferencias
+- ✅ Sincronización de HP con error < 1%
+- ✅ Validación previene 100% de valores inválidos
+- ✅ Desincronización detectada y corregida automáticamente
+- ✅ Lag compensation reduce quejas de "hit detection" en 80%
+- ✅ Manejo de desconexiones sin crashes
+- ✅ Performance similar en ambos modos
+
+---
+
+#### 11.12.11 Próximos Pasos
+
+1. **Revisar y aprobar plan:** Validar estrategia
+2. **Iniciar Fase 7:** Comenzar con sistema de vida
+3. **Testing continuo:** Verificar en ambos modos después de cada feature
+4. **Iteración:** Ajustar según feedback y problemas encontrados
+
+---
+
 ## 12. Referencias y Notas
 
 ### 12.1 Estructura de Archivos
 ```
 Assets/PartyGame/OriginalVersion/Completed-Game/
 ├── Scripts/
+│   ├── Core/ (NUEVO - Fase 1)
+│   │   ├── IGameMode.cs
+│   │   ├── LocalGameMode.cs
+│   │   ├── NetworkGameMode.cs
+│   │   ├── GameModeManager.cs
+│   │   └── TestGameMode.cs
+│   ├── Health/ (FUTURO - Fase 7)
+│   │   ├── CHealthSystem.cs
+│   │   └── CHealthBar.cs
+│   ├── Damage/ (FUTURO - Fase 7)
+│   │   ├── CDamageSystem.cs
+│   │   └── CDamageInfo.cs
+│   ├── GameState/ (FUTURO - Fase 8)
+│   │   ├── CGameStateManager.cs
+│   │   ├── CWinCondition.cs
+│   │   └── CRoundManager.cs
+│   ├── Network/ (FUTURO - Fase 3+)
+│   │   ├── CNetworkHealth.cs
+│   │   ├── CNetworkDamage.cs
+│   │   └── CNetworkGameState.cs
 │   ├── Attack/
 │   ├── Player/
 │   ├── Manager/
@@ -905,6 +2099,8 @@ Assets/PartyGame/OriginalVersion/Completed-Game/
 ├── Materials/
 ├── Animation-Test/
 ├── InputAction/
+├── Resources/ (NUEVO - para Photon)
+│   └── PlayerPrefabs/
 └── Scenes/
 ```
 
@@ -912,6 +2108,7 @@ Assets/PartyGame/OriginalVersion/Completed-Game/
 - Unity Input System
 - Unity Universal Render Pipeline
 - TextMesh Pro (opcional)
+- Photon PUN 2 (para modo online - opcional, el juego funciona sin él en modo local)
 
 ### 12.3 Convenciones de Código
 - Prefijos de clase: `C` (ej: `CPlayer`, `CAttack`)
@@ -932,7 +2129,29 @@ Para preguntas sobre el diseño o implementación del juego, consultar:
 
 **Documento creado:** 2024  
 **Última actualización:** 2024  
-**Versión del Documento:** 2.0
+**Versión del Documento:** 2.2
+
+### Cambios en Versión 2.2
+- ✅ Agregada sección 11.12: Plan de Implementación de Funcionalidades Faltantes
+- ✅ Plan detallado para sistema de vida/HP unificado
+- ✅ Plan detallado para sistema de daño con validación
+- ✅ Plan detallado para condiciones de victoria
+- ✅ Plan detallado para sistema de rondas
+- ✅ Estrategias específicas para evitar edge problems (cheating, desincronización, lag, desconexiones)
+- ✅ Arquitectura propuesta con interfaces y componentes
+- ✅ Código de ejemplo para cada funcionalidad
+- ✅ Checklist de prevención de edge problems
+- ✅ Métricas de éxito definidas
+
+---
+
+### Cambios en Versión 2.1
+- ✅ Agregada sección 11.11: Sistemas a Simplificar o Eliminar
+- ✅ Identificados sistemas de test/debug a eliminar
+- ✅ Identificadas clases vacías o no implementadas
+- ✅ Plan de limpieza pre-refactorización (Fase 0)
+- ✅ Análisis de impacto de limpieza en reducción de riesgos
+- ✅ Checklist completo de limpieza
 
 ### Cambios en Versión 2.0
 - ✅ Agregada sección completa de Plan de Refactorización e Integración con Photon
